@@ -1,0 +1,31 @@
+    - name: Create a Skyblock dev container
+      lxd_container:
+        name: keelhauled
+        state: started
+        source:
+          type: image
+          mode: pull
+          server: https://images.linuxcontainers.org
+          protocol: lxd
+          alias: ubuntu/xenial/amd64
+        profiles: ["default"]
+        wait_for_ipv4_addresses: true
+        timeout: 600
+      when: inventory_hostname_short == "alestorm"
+    - raw: lxc config set keelhauled limits.memory 2048MB
+
+    - name: Create a Ark dev container
+      lxd_container:
+        name: nancy
+        state: started
+        source:
+          type: image
+          mode: pull
+          server: https://images.linuxcontainers.org
+          protocol: lxd
+          alias: ubuntu/xenial/amd64
+        profiles: ["default"]
+        wait_for_ipv4_addresses: true
+        timeout: 600
+      when: inventory_hostname_short == "alestorm"
+    - raw: lxc config set nancy limits.memory 6096MB
