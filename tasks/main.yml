@@ -1,31 +1,52 @@
-    - name: Create a Skyblock dev container
-      lxd_container:
-        name: keelhauled
-        state: started
-        source:
-          type: image
-          mode: pull
-          server: https://images.linuxcontainers.org
-          protocol: lxd
-          alias: ubuntu/xenial/amd64
-        profiles: ["default"]
-        wait_for_ipv4_addresses: true
-        timeout: 600
-      when: inventory_hostname_short == "alestorm"
-    - raw: lxc config set keelhauled limits.memory 2048MB
+- name: Create a {{ item.host }} container
+  lxd_container:
+    name: "{{ item.servername }}"
+    state: "{{ item.state }}"
+    source:
+      type: image
+      mode: pull
+      server: https://images.linuxcontainers.org
+      protocol: lxd
+      alias: ubuntu/bionic/amd64
+      profiles: ["default"]
+    wait_for_ipv4_addresses: true
+    timeout: 600
+  when: inventory_hostname_short == "{{ item.host }}"
+  register: r
+  with_items: "{{ lxdcontainers }}"
 
-    - name: Create a Ark dev container
-      lxd_container:
-        name: nancy
-        state: started
-        source:
-          type: image
-          mode: pull
-          server: https://images.linuxcontainers.org
-          protocol: lxd
-          alias: ubuntu/xenial/amd64
-        profiles: ["default"]
-        wait_for_ipv4_addresses: true
-        timeout: 600
-      when: inventory_hostname_short == "alestorm"
-    - raw: lxc config set nancy limits.memory 6096MB
+- name: Another symbolic mode example, adding some permissions and removing others
+  template:
+    src: run.j2
+    dest: /root/run.sh
+    owner: root
+    group: root
+    mode: u+rw,g-wx,o-rwx
+  when: inventory_hostname_short == "{{ item.host }}" and r.changed and "started" == "{{ item.state }}"
+  ignore_errors: true
+  with_items: "{{ lxdcontainers }}"
+
+- name: Run script
+  raw: "sudo bash /root/run.sh"
+  when: inventory_hostname_short == "{{ item.host }}" and r.changed and "started" == "{{ item.state }}"
+  ignore_errors: true
+  with_items: "{{ lxdcontainers }}"
+
+- name: Run lxc config
+  raw: 'lxc config set {{ item.servername }} limits.memory "{{ item.ram }}"MB'
+  when: inventory_hostname_short == "{{ item.host }}" and r.changed and "started" == "{{ item.state }}"
+  ignore_errors: true
+  with_items: "{{ lxdcontainers }}"
+
+- name: Run lxc get mac
+  command: 'lxc config set {{ item.servername }} volatile.eth0.hwaddr {{ item.mac }}'
+  when: inventory_hostname_short == "{{ item.host }}" and r.changed and "started" == "{{ item.state }}"
+  ignore_errors: true
+  with_items: "{{ lxdcontainers }}"
+
+- name: Restart a container
+  lxd_container:
+    name: "{{ item.servername }}"
+    state: restarted
+  when: inventory_hostname_short == "{{ item.host }}" and r.changed and "started" == "{{ item.state }}"
+  with_items: "{{ lxdcontainers }}"
