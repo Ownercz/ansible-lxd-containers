@@ -18,16 +18,16 @@
 - name: Another symbolic mode example, adding some permissions and removing others
   template:
     src: run.j2
-    dest: /root/run.sh
+    dest: /root/run-{{ item.servername }}.sh
     owner: root
     group: root
     mode: u+rw,g-wx,o-rwx
-  when: inventory_hostname_short == "{{ item.host }}" and r.changed and "started" == "{{ item.state }}"
+  when: inventory_hostname_short == item.host and r.changed and "started" == item.state
   ignore_errors: true
   with_items: "{{ lxdcontainers }}"
 
 - name: Run script
-  raw: "sudo bash /root/run.sh"
+  raw: "sudo bash /root/run-{{ item.servername }}.sh"
   when: inventory_hostname_short == "{{ item.host }}" and r.changed and "started" == "{{ item.state }}"
   ignore_errors: true
   with_items: "{{ lxdcontainers }}"
